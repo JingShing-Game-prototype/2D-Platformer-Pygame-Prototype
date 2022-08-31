@@ -33,6 +33,10 @@ VIRTUAL_RES = (screen_width, screen_height)
 REAL_RES = (1280, 720)
 # VIRTUAL_RES = (800, 600)
 # REAL_RES = (800, 600)
-pygame.display.set_mode(REAL_RES, pygame.DOUBLEBUF|pygame.OPENGL)
-screen = pygame.Surface(VIRTUAL_RES).convert((255, 65280, 16711680, 0))
-crt_shader = Graphic_engine(screen=screen, style=2, VIRTUAL_RES=VIRTUAL_RES)
+
+def get_map_width_and_height(map, tile_size):
+	map_width = len(map[0])*tile_size
+	map_height = len(map) * tile_size
+	return map_width, map_height
+map_width, map_height = get_map_width_and_height(level_map, tile_size)
+

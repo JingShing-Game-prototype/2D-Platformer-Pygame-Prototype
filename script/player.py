@@ -1,9 +1,11 @@
 import pygame
+from entity import Entity
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, surface, creat_jump_or_run_particles):
+class Player(Entity):
+    def __init__(self, pos, groups, obstacle_sprites, create_jump_or_run_particles):
         super().__init__(groups)
         self.import_character_assets()
+        self.obstacle_sprites = obstacle_sprites
         self.frame_index = 0
         self.animation_speed = 0.15
         self.image = self.animations['idle'][self.frame_index]
@@ -12,8 +14,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft = pos)
 
         # dust particles
-        self.display_surface =  surface
-        self.creat_jump_or_run_particles = creat_jump_or_run_particles
+        self.create_jump_or_run_particles = create_jump_or_run_particles
         
         # player movement
         self.direction = pygame.math.Vector2(0, 0)
@@ -73,15 +74,6 @@ class Player(pygame.sprite.Sprite):
         else:
             self.rect = self.image.get_rect(center = self.rect.center)
 
-    def run_dust_animation(self):
-        if self.status == 'run' and self.on_ground:
-            # self.dust_frame_index += self.dust_animation_speed
-            # if self.dust_frame_index >= len(self.dust_run_particles):
-            #     self.dust_frame_index = 0
-            # dust_particle = self.dust_run_particles[int(self.dust_frame_index)] if not self.flip else pygame.transform.flip(self.dust_run_particles[int(self.dust_frame_index)], True, False)
-            # pos = self.rect.bottomleft - pygame.math.Vector2(6, 10) if not self.flip else self.rect.bottomright - pygame.math.Vector2(6, 10)
-            self.creat_jump_or_run_particles(self.rect.midbottom, 'run')
-
     def get_input(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RIGHT]:
@@ -96,7 +88,7 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_SPACE] and self.on_ground:
             self.gravity = self.or_gravity
             self.jump()
-            self.creat_jump_or_run_particles(self.rect.midbottom)
+            self.create_jump_or_run_particles(self.rect.midbottom)
 
     def get_status(self):
         if self.direction.y < 0:
@@ -109,22 +101,10 @@ class Player(pygame.sprite.Sprite):
             else:
                 self.status = 'idle'
 
-    def apply_gravity(self):
-        self.direction.y += self.gravity
-        self.rect.y += self.direction.y
-
-    def jump(self):
-        self.direction.y = self.jump_speed
-
-    def debug_show_can_jump(self):
-        if self.on_ground:
-            self.image.fill('green')
-        else:
-            self.image.fill('red')
-
     def update(self):
-        # self.debug_show_can_jump()
+        self.common_cooldown()
         self.get_input()
         self.get_status()
         self.animate()
         self.run_dust_animation()
+        self.move()

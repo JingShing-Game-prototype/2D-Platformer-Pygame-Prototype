@@ -15,7 +15,7 @@ class Level:
         self.current_x = 0
         
         # sprite group
-        self.visible_sprites = YSortCameraGroup()
+        self.visible_sprites = YSortCameraGroup(self.display_surface)
         self.obstacle_sprites = pygame.sprite.Group()
         self.tiles = pygame.sprite.Group()
         # single group for single player
@@ -57,8 +57,9 @@ class Level:
                 if cell == 'X':
                     Tile((x, y), 
                     [self.visible_sprites,
+                    self.obstacle_sprites,
                     self.tiles
-                    ], 
+                    ],
                     tile_size)
                 elif cell == 'P':
                     if self.player.sprite and not reset:
@@ -67,110 +68,32 @@ class Level:
                     else:
                         Player((x, y), 
                         [self.visible_sprites,
+                        self.obstacle_sprites,
                         self.player], 
-                        self.display_surface, 
+                        self.obstacle_sprites,
                         self.create_jump_or_run_particles)
-
-    def scroll_screen(self, direction):
-        # camera
-        if direction == 'x':
-            player = self.player.sprite
-            player_x = player.rect.centerx
-            direction_x = player.direction.x
-
-            if player_x < screen_width/4 and direction_x < 0:
-                self.world_shift.x = 8
-                player.speed = 0
-            elif player_x > screen_width - (screen_width/4) and direction_x > 0:
-                self.world_shift.x = -8
-                player.speed = 0
-            else:
-                self.world_shift.x = 0
-                player.speed = player.or_speed
-                
-        if direction == 'y':
-            player = self.player.sprite
-            player_y = player.rect.centery
-            direction_y = player.direction.y
-
-            if player_y < screen_height/4 and direction_y < 0:
-                self.world_shift.y = 8
-                player.jump_speed = 0
-            elif player_y > screen_height - (screen_height/4) and direction_y > 0:
-                self.world_shift.y = -8
-                player.jump_speed = 0
-            else:
-                self.world_shift.y = 0
-                player.jump_speed = player.or_jump_speed
-
-    def player_movement_collision(self, direction):
-        if direction == 'horizontal':
-            player = self.player.sprite
-            player.rect.x += player.direction.x * player.speed
-
-            for sprite in self.tiles.sprites():
-                if sprite.rect.colliderect(player.rect):
-                    if player.direction.x < 0:
-                        player.rect.left = sprite.rect.right
-                        player.on_left = True
-                        self.current_x = player.rect.left
-                    if player.direction.x > 0:
-                        player.rect.right = sprite.rect.left
-                        player.on_right = True
-                        self.current_x = player.rect.right
-
-            if player.on_left and (player.rect.left < self.current_x or player.direction.x >= 0):
-                player.on_left = False
-            if player.on_right and (player.rect.right > self.current_x or player.direction.x <= 0):
-                player.on_right = False
-
-        elif direction == 'vertial':
-            player = self.player.sprite
-            player.apply_gravity()
-
-            for sprite in self.tiles.sprites():
-                if sprite.rect.colliderect(player.rect):
-                    if player.direction.y > 0:
-                        player.rect.bottom = sprite.rect.top
-                        player.direction.y = 0
-                        player.on_ground = True
-                    elif player.direction.y < 0:
-                        player.rect.top = sprite.rect.bottom
-                        player.direction.y = 0
-                        player.on_ceiling = True
-
-            if player.on_ground and player.direction.y < 0 or player.direction.y > 1:
-                player.on_ground = False
-            if player.on_ceiling and player.direction.y > 0.1:
-                player.on_ceiling = False
-
-    def player_over_ground(self):
-        if self.player.sprite.rect.y > self.display_surface.get_height():
-            self.setup_level(self.level_data) # keep body
 
     def run(self):
         self.visible_sprites.custom_draw(self.player.sprite)
         self.visible_sprites.update()
-        self.player_movement_collision(direction='horizontal')
         self.get_player_on_ground()
-        self.player_movement_collision(direction='vertial')
         self.create_landing_dust()
-        self.player_over_ground()
 
-        debug(str(self.player.sprite.rect))
+        debug(str(self.player.sprite.rect), screen = self.display_surface)
 
-from settings import screen, screen_height, screen_width
+from settings import screen_height, screen_width
 class YSortCameraGroup(pygame.sprite.Group):
     # in godot we call it YSort to make 2.5D
-    def __init__(self):
+    def __init__(self, screen):
         # general setup
         super().__init__()
+        self.screen = screen
 
         # camera offset
         self.offset = pygame.math.Vector2()
         # to stay player in middle of screen. cut it half.
-        self.half_screen_width = screen.get_size()[0]//2
-        self.half_screen_height = screen.get_size()[1]//2
+        self.half_screen_width = screen_width//2
+        self.half_screen_height = screen_height//2
         # //2 to get divide 2 result in int
 
         # box camera setup
@@ -178,8 +101,8 @@ class YSortCameraGroup(pygame.sprite.Group):
         self.camera_borders = {'left': 400, 'right': 400, 'top': 200, 'bottom': 200}
         camera_boarders_left = self.camera_borders['left']
         camera_boarders_top = self.camera_borders['top']
-        camera_boarders_width = screen.get_size()[0]  - (self.camera_borders['left'] + self.camera_borders['right'])
-        camera_boarders_height = screen.get_size()[1]  - (self.camera_borders['top'] + self.camera_borders['bottom'])
+        camera_boarders_width = screen_width  - (self.camera_borders['left'] + self.camera_borders['right'])
+        camera_boarders_height = screen_height  - (self.camera_borders['top'] + self.camera_borders['bottom'])
         self.camera_rect = pygame.Rect(camera_boarders_left, camera_boarders_top, camera_boarders_width, camera_boarders_height)
 
         # camera speed
@@ -246,8 +169,8 @@ class YSortCameraGroup(pygame.sprite.Group):
 
         left_border = self.camera_borders['left']
         top_border = self.camera_borders['top']
-        right_border = screen.get_size()[0] - self.camera_borders['right']
-        bottom_border = screen.get_size()[1] - self.camera_borders['bottom']
+        right_border = screen_width - self.camera_borders['right']
+        bottom_border = screen_height - self.camera_borders['bottom']
 
         if top_border < mouse.y < bottom_border:
             if mouse.x < left_border:
@@ -327,7 +250,7 @@ class YSortCameraGroup(pygame.sprite.Group):
         scaled_surf  = pygame.transform.scale(self.internal_surface, self.internal_surface_size_vector * self.zoom_scale)
         scaled_rect = scaled_surf.get_rect(center = (self.half_screen_width, self.half_screen_height))
 
-        screen.blit(scaled_surf, scaled_rect)
+        self.screen.blit(scaled_surf, scaled_rect)
         
         # camera box line
         # pygame.draw.rect(screen, 'yellow', self.camera_rect, 5)
